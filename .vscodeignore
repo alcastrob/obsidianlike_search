@@ -1,0 +1,9 @@
+# Source (el bundle ya incluye todo)
+node_modules/
+src/
+.vscode/
+.claude/
+tsconfig.json
+esbuild.js
+.gitignore
+dist/extension.js.map

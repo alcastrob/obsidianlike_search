@@ -1,0 +1,185 @@
+import * as vscode from 'vscode';
+import * as path from 'path';
+import { FileInput, FileResult, parseQuery, search } from './searchEngine';
+
+interface SearchRequestMessage {
+  command: 'search';
+  query: string;
+  caseSensitive: boolean;
+  sort: 'name' | 'relevance';
+}
+
+interface OpenMatchMessage {
+  command: 'openMatch';
+  uri: string;
+  line?: number;
+  startCol?: number;
+  endCol?: number;
+}
+
+type InboundMessage = SearchRequestMessage | OpenMatchMessage | { command: 'ready' };
+
+export class SearchViewProvider implements vscode.WebviewViewProvider {
+  public static readonly viewType = 'obsidianlikeSearch.searchView';
+
+  private view?: vscode.WebviewView;
+
+  constructor(private readonly context: vscode.ExtensionContext) {}
+
+  public resolveWebviewView(webviewView: vscode.WebviewView): void {
+    this.view = webviewView;
+
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'media')],
+    };
+
+    webviewView.webview.html = this.getHtml(webviewView.webview);
+
+    webviewView.webview.onDidReceiveMessage(async (message: InboundMessage) => {
+      if (message.command === 'search') {
+        await this.handleSearch(message);
+      } else if (message.command === 'openMatch') {
+        await this.handleOpenMatch(message);
+      }
+    });
+  }
+
+  public focusInput(): void {
+    this.view?.show(true);
+    this.view?.webview.postMessage({ command: 'focus' });
+  }
+
+  private async handleSearch(message: SearchRequestMessage): Promise<void> {
+    if (!this.view) return;
+
+    const config = vscode.workspace.getConfiguration('obsidianlikeSearch');
+    const include = config.get<string>('include', '**/*.md');
+    const exclude = config.get<string>('exclude', '**/{node_modules,.git,.obsidian}/**');
+
+    const trimmed = message.query.trim();
+    if (!trimmed) {
+      this.view.webview.postMessage({ command: 'results', total: 0, files: [] });
+      return;
+    }
+
+    let files: FileInput[];
+    try {
+      const uris = await vscode.workspace.findFiles(include, exclude);
+      files = await Promise.all(
+        uris.map(async (uri) => {
+          const bytes = await vscode.workspace.fs.readFile(uri);
+          const text = Buffer.from(bytes).toString('utf8');
+          const relativePath = vscode.workspace.asRelativePath(uri, true);
+          return { uri: uri.toString(), relativePath, text };
+        })
+      );
+    } catch (err) {
+      this.view.webview.postMessage({ command: 'error', message: String(err) });
+      return;
+    }
+
+    const parsed = parseQuery(trimmed);
+    let results = search(parsed, files, message.caseSensitive);
+
+    if (message.sort === 'relevance') {
+      results.sort((a, b) => b.score - a.score || a.fileName.localeCompare(b.fileName));
+    } else {
+      results.sort((a, b) => a.fileName.localeCompare(b.fileName) || a.relativePath.localeCompare(b.relativePath));
+    }
+
+    const total = results.reduce((sum, r) => sum + r.score, 0);
+
+    this.view.webview.postMessage({
+      command: 'results',
+      total,
+      files: results,
+    });
+  }
+
+  private async handleOpenMatch(message: OpenMatchMessage): Promise<void> {
+    try {
+      const uri = vscode.Uri.parse(message.uri);
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const editor = await vscode.window.showTextDocument(doc, { preview: false });
+
+      if (typeof message.line === 'number') {
+        const startCol = message.startCol ?? 0;
+        const endCol = message.endCol ?? startCol;
+        const lineCount = doc.lineCount;
+        const line = Math.min(message.line, Math.max(0, lineCount - 1));
+        const lineLength = doc.lineAt(line).text.length;
+        const range = new vscode.Range(
+          line,
+          Math.min(startCol, lineLength),
+          line,
+          Math.min(endCol, lineLength)
+        );
+        editor.selection = new vscode.Selection(range.start, range.end);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+      }
+    } catch (err) {
+      vscode.window.showErrorMessage(`No se pudo abrir el archivo: ${err}`);
+    }
+  }
+
+  private getHtml(webview: vscode.Webview): string {
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'media', 'main.js')
+    );
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'media', 'main.css')
+    );
+    const nonce = getNonce();
+
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';" />
+  <link href="${styleUri}" rel="stylesheet" />
+  <title>Búsqueda</title>
+</head>
+<body>
+  <div class="search-box-row">
+    <span class="icon icon-search" aria-hidden="true"></span>
+    <input id="searchInput" type="text" placeholder="Escriba para empezar a buscar" autocomplete="off" />
+    <button id="caseToggle" class="text-btn" title="Coincidir mayúsculas/minúsculas">Aa</button>
+    <button id="clearBtn" class="icon-btn" title="Limpiar">✕</button>
+    <button id="optionsToggle" class="icon-btn" title="Opciones de búsqueda">⚙</button>
+  </div>
+
+  <div id="optionsPanel" class="options-panel hidden">
+    <div class="options-title">Opciones de búsqueda</div>
+    <div class="option-row"><code>path:</code><span>coincidir la ruta del archivo</span></div>
+    <div class="option-row"><code>file:</code><span>coincidir el nombre de archivo</span></div>
+    <div class="option-row"><code>tag:</code><span>buscar por etiquetas</span></div>
+    <div class="option-row"><code>line:</code><span>buscar palabras clave en la misma línea</span></div>
+    <div class="option-row"><code>section:</code><span>buscar palabras clave bajo el mismo encabezado</span></div>
+    <div class="option-row"><code>[propiedad]</code><span>coincidir la propiedad</span></div>
+  </div>
+
+  <div id="resultsHeader" class="results-header hidden">
+    <span id="resultsCount"></span>
+    <select id="sortSelect">
+      <option value="name">Ordenar por nombre</option>
+      <option value="relevance">Ordenar por relevancia</option>
+    </select>
+  </div>
+
+  <div id="resultsContainer" class="results-container"></div>
+
+  <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+  }
+}
+
+function getNonce(): string {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}

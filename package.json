@@ -1,0 +1,72 @@
+{
+  "name": "obsidianlike-search",
+  "displayName": "Obsidian-like Search",
+  "description": "Búsqueda de texto completo estilo Obsidian para bóvedas Markdown abiertas en VS Code",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "angelCastro",
+  "icon": "media/obsidian-icon-violeta.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "obsidianlikeSearch.open",
+        "title": "Obsidian-like Search: Abrir búsqueda",
+        "icon": "$(search)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "obsidianlikeSearch",
+          "title": "Búsqueda Obsidian",
+          "icon": "media/activitybar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "obsidianlikeSearch": [
+        {
+          "type": "webview",
+          "id": "obsidianlikeSearch.searchView",
+          "name": "Búsqueda",
+          "icon": "media/activitybar-icon.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Obsidian-like Search",
+      "properties": {
+        "obsidianlikeSearch.include": {
+          "type": "string",
+          "default": "**/*.md",
+          "description": "Patrón glob de archivos que se incluyen en la búsqueda."
+        },
+        "obsidianlikeSearch.exclude": {
+          "type": "string",
+          "default": "**/{node_modules,.git,.obsidian}/**",
+          "description": "Patrón glob de archivos/carpetas excluidos de la búsqueda."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "check-types": "tsc --noEmit -p ./",
+    "package": "npm run compile && vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.5",
+    "esbuild": "^0.20.2",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
