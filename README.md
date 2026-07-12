@@ -4,7 +4,9 @@ Extensión local de VS Code que añade un panel de búsqueda de texto completo e
 
 ## Uso
 
-Abre el panel desde el icono de búsqueda en la barra de actividad, o con el comando **"Obsidian-like Search: Abrir búsqueda"** (`obsidianlikeSearch.open`). Escribe la consulta y pulsa Enter.
+Abre el panel desde el icono de búsqueda en la barra de actividad, o con el comando **"Obsidian-like Search: Abrir búsqueda"** (`obsidianlikeSearch.open`). Los resultados se actualizan en vivo según se escribe, sin necesidad de pulsar Enter (Enter fuerza la búsqueda al instante y la guarda en el historial).
+
+Mientras el cuadro de búsqueda está vacío se muestran siempre el resumen de sintaxis y el historial de búsquedas recientes; en cuanto se escribe algo, ambos se ocultan y aparecen los resultados. Cada entrada del historial (hasta 15, sin duplicados) se puede volver a ejecutar con un clic o eliminar con su botón `✕`.
 
 ### Sintaxis de búsqueda
 
@@ -20,7 +22,7 @@ Abre el panel desde el icono de búsqueda en la barra de actividad, o con el com
 
 Todos los términos y filtros se combinan con lógica AND. Los resultados se agrupan por archivo, con fragmentos de contexto resaltados que se pueden expandir/colapsar y abrir directamente en el editor.
 
-Botones de la barra de búsqueda: `Aa` alterna sensibilidad a mayúsculas/minúsculas, `✕` limpia la búsqueda, `⚙` muestra un resumen de la sintaxis disponible. Los resultados se pueden ordenar por nombre o por relevancia.
+Botones de la barra de búsqueda: `Aa` alterna sensibilidad a mayúsculas/minúsculas, `✕` limpia la búsqueda, `⚙` muestra/oculta el resumen de sintaxis mientras hay una búsqueda en curso (en reposo se muestra siempre). Los resultados se pueden ordenar por nombre o por relevancia.
 
 ## Configuración
 

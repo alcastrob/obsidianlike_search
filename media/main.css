@@ -75,6 +75,64 @@ body {
   display: none !important;
 }
 
+.history-panel {
+  margin-top: 8px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+}
+
+.history-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.history-query {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.history-remove {
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  opacity: 0;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
+.history-item:hover .history-remove {
+  opacity: 0.6;
+}
+
+.history-remove:hover {
+  opacity: 1 !important;
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+}
+
+.history-empty {
+  opacity: 0.6;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
 .options-panel {
   margin-top: 8px;
   border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3));

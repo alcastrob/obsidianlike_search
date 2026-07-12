@@ -6,16 +6,23 @@
   const clearBtn = document.getElementById('clearBtn');
   const optionsToggle = document.getElementById('optionsToggle');
   const optionsPanel = document.getElementById('optionsPanel');
+  const historyPanel = document.getElementById('historyPanel');
+  const historyList = document.getElementById('historyList');
   const resultsHeader = document.getElementById('resultsHeader');
   const resultsCount = document.getElementById('resultsCount');
   const sortSelect = document.getElementById('sortSelect');
   const resultsContainer = document.getElementById('resultsContainer');
 
   const DEBOUNCE_MS = 200;
+  const MAX_HISTORY = 15;
+
+  const savedState = vscode.getState() || {};
 
   const state = {
     caseSensitive: false,
     collapsed: new Set(),
+    optionsOpen: false,
+    history: Array.isArray(savedState.history) ? savedState.history : [],
   };
 
   let debounceTimer = null;
@@ -27,6 +34,74 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function persistHistory() {
+    vscode.setState(Object.assign({}, vscode.getState(), { history: state.history }));
+  }
+
+  function addToHistory(query) {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    state.history = [trimmed, ...state.history.filter((q) => q !== trimmed)].slice(0, MAX_HISTORY);
+    persistHistory();
+    renderHistory();
+  }
+
+  function removeFromHistory(query) {
+    state.history = state.history.filter((q) => q !== query);
+    persistHistory();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    historyList.innerHTML = '';
+
+    if (state.history.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = 'Aún no hay búsquedas recientes.';
+      historyList.appendChild(empty);
+      return;
+    }
+
+    for (const query of state.history) {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+
+      const label = document.createElement('span');
+      label.className = 'history-query';
+      label.textContent = query;
+      label.addEventListener('click', () => {
+        searchInput.value = query;
+        updateIdleVisibility();
+        runSearch();
+        searchInput.focus();
+      });
+
+      const remove = document.createElement('button');
+      remove.className = 'history-remove';
+      remove.title = 'Eliminar del historial';
+      remove.textContent = '✕';
+      remove.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeFromHistory(query);
+      });
+
+      item.appendChild(label);
+      item.appendChild(remove);
+      historyList.appendChild(item);
+    }
+  }
+
+  function isIdle() {
+    return !searchInput.value.trim();
+  }
+
+  function updateIdleVisibility() {
+    const idle = isIdle();
+    historyPanel.classList.toggle('hidden', !idle);
+    optionsPanel.classList.toggle('hidden', !(idle || state.optionsOpen));
   }
 
   function runSearch() {
@@ -54,6 +129,7 @@
   }
 
   searchInput.addEventListener('input', () => {
+    updateIdleVisibility();
     if (!searchInput.value.trim()) {
       if (debounceTimer) {
         clearTimeout(debounceTimer);
@@ -69,6 +145,7 @@
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       runSearch();
+      addToHistory(searchInput.value);
     }
   });
 
@@ -86,11 +163,13 @@
     searchInput.value = '';
     resultsContainer.innerHTML = '';
     resultsHeader.classList.add('hidden');
+    updateIdleVisibility();
     searchInput.focus();
   });
 
   optionsToggle.addEventListener('click', () => {
-    optionsPanel.classList.toggle('hidden');
+    state.optionsOpen = !state.optionsOpen;
+    updateIdleVisibility();
   });
 
   sortSelect.addEventListener('change', () => {
@@ -211,6 +290,9 @@
       searchInput.select();
     }
   });
+
+  renderHistory();
+  updateIdleVisibility();
 
   vscode.postMessage({ command: 'ready' });
 })();

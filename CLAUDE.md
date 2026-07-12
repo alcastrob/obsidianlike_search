@@ -60,6 +60,12 @@ This project is also wired into `..\obsidianlike\make.bat`, which packages/reins
 
 Search runs live as the user types: an `input` listener on `#searchInput` debounces 200 ms (`DEBOUNCE_MS`) before posting a `search` message to the extension host. Pressing Enter cancels the debounce and searches immediately. Clearing the field (or the `✕` button) cancels any pending search and clears results synchronously, with no round-trip to the host. Toggling case-sensitivity or changing the sort order re-runs the search immediately (no debounce), since those are discrete user actions rather than a stream of keystrokes.
 
+### Idle state: `#idlePanel` (`#historyPanel` + `#optionsPanel`)
+
+Whenever the search box is empty ("no search started" — `isIdle()`), both the syntax-help panel and a recent-searches panel are shown automatically (`updateIdleVisibility()`, driven from the `input`/`clear` handlers). Once there's text in the box, both hide, except `#optionsPanel` stays visible if the user explicitly opened it via the `⚙` button (`state.optionsOpen`) — that toggle only matters while a search is in progress, since idle already forces it open.
+
+Search history (`state.history`, capped at `MAX_HISTORY = 15`, most-recent-first, deduped) is recorded only on an explicit Enter press (`addToHistory`), not on every debounced keystroke — otherwise every partial query while typing would pollute it. It's persisted via `vscode.setState()`/`getState()` (webview state, survives the view being hidden/reloaded — not extension-host state). Clicking a history entry fills the input and searches immediately; each entry has its own `✕` to remove it (`removeFromHistory`).
+
 ### Config (`package.json` → `contributes.configuration`)
 
 - `obsidianlikeSearch.include` (default `**/*.md`)

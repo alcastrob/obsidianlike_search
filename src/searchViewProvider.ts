@@ -149,14 +149,21 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     <button id="optionsToggle" class="icon-btn" title="Opciones de búsqueda">⚙</button>
   </div>
 
-  <div id="optionsPanel" class="options-panel hidden">
-    <div class="options-title">Opciones de búsqueda</div>
-    <div class="option-row"><code>path:</code><span>coincidir la ruta del archivo</span></div>
-    <div class="option-row"><code>file:</code><span>coincidir el nombre de archivo</span></div>
-    <div class="option-row"><code>tag:</code><span>buscar por etiquetas</span></div>
-    <div class="option-row"><code>line:</code><span>buscar palabras clave en la misma línea</span></div>
-    <div class="option-row"><code>section:</code><span>buscar palabras clave bajo el mismo encabezado</span></div>
-    <div class="option-row"><code>[propiedad]</code><span>coincidir la propiedad</span></div>
+  <div id="idlePanel">
+    <div id="historyPanel" class="history-panel">
+      <div class="options-title">Búsquedas recientes</div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+
+    <div id="optionsPanel" class="options-panel">
+      <div class="options-title">Opciones de búsqueda</div>
+      <div class="option-row"><code>path:</code><span>coincidir la ruta del archivo</span></div>
+      <div class="option-row"><code>file:</code><span>coincidir el nombre de archivo</span></div>
+      <div class="option-row"><code>tag:</code><span>buscar por etiquetas</span></div>
+      <div class="option-row"><code>line:</code><span>buscar palabras clave en la misma línea</span></div>
+      <div class="option-row"><code>section:</code><span>buscar palabras clave bajo el mismo encabezado</span></div>
+      <div class="option-row"><code>[propiedad]</code><span>coincidir la propiedad</span></div>
+    </div>
   </div>
 
   <div id="resultsHeader" class="results-header hidden">
