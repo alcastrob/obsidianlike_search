@@ -6,7 +6,7 @@ interface SearchRequestMessage {
   command: 'search';
   query: string;
   caseSensitive: boolean;
-  sort: 'name' | 'relevance';
+  sort: 'name' | 'relevance' | 'date';
 }
 
 interface OpenMatchMessage {
@@ -55,7 +55,17 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 
     const config = vscode.workspace.getConfiguration('obsidianlikeSearch');
     const include = config.get<string>('include', '**/*.md');
-    const exclude = config.get<string>('exclude', '**/{node_modules,.git,.obsidian}/**');
+    const excludePatterns = config.get<string[]>('exclude', [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/.obsidian/**',
+    ]);
+    const exclude =
+      excludePatterns.length === 0
+        ? undefined
+        : excludePatterns.length === 1
+          ? excludePatterns[0]
+          : `{${excludePatterns.join(',')}}`;
 
     const trimmed = message.query.trim();
     if (!trimmed) {
@@ -68,10 +78,13 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
       const uris = await vscode.workspace.findFiles(include, exclude);
       files = await Promise.all(
         uris.map(async (uri) => {
-          const bytes = await vscode.workspace.fs.readFile(uri);
+          const [bytes, stat] = await Promise.all([
+            vscode.workspace.fs.readFile(uri),
+            vscode.workspace.fs.stat(uri),
+          ]);
           const text = Buffer.from(bytes).toString('utf8');
           const relativePath = vscode.workspace.asRelativePath(uri, true);
-          return { uri: uri.toString(), relativePath, text };
+          return { uri: uri.toString(), relativePath, text, mtime: stat.mtime };
         })
       );
     } catch (err) {
@@ -82,10 +95,23 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     const parsed = parseQuery(trimmed);
     let results = search(parsed, files, message.caseSensitive);
 
+    // Filename matches always lead, regardless of the chosen sort mode — that's the
+    // result the user is almost always looking for when they typed the query.
     if (message.sort === 'relevance') {
-      results.sort((a, b) => b.score - a.score || a.fileName.localeCompare(b.fileName));
+      results.sort(
+        (a, b) => Number(b.titleMatch) - Number(a.titleMatch) || b.score - a.score || a.fileName.localeCompare(b.fileName)
+      );
+    } else if (message.sort === 'date') {
+      results.sort(
+        (a, b) => Number(b.titleMatch) - Number(a.titleMatch) || b.mtime - a.mtime || a.fileName.localeCompare(b.fileName)
+      );
     } else {
-      results.sort((a, b) => a.fileName.localeCompare(b.fileName) || a.relativePath.localeCompare(b.relativePath));
+      results.sort(
+        (a, b) =>
+          Number(b.titleMatch) - Number(a.titleMatch) ||
+          a.fileName.localeCompare(b.fileName) ||
+          a.relativePath.localeCompare(b.relativePath)
+      );
     }
 
     const total = results.reduce((sum, r) => sum + r.score, 0);
@@ -100,6 +126,19 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
   private async handleOpenMatch(message: OpenMatchMessage): Promise<void> {
     try {
       const uri = vscode.Uri.parse(message.uri);
+
+      // Soft dependency on angelCastro.obsidianlike (same "Obsidian like" profile):
+      // when present, open results in its custom rendered editor instead of the
+      // plain text editor. `vaultTool.openNoteAtLine` only knows about the line
+      // (matching the granularity of its own wikilink/heading navigation), not the
+      // column, so it's called whenever we have a line and falls back to the plain
+      // text editor (with exact column selection) otherwise.
+      const commands = await vscode.commands.getCommands(true);
+      if (commands.includes('vaultTool.openNoteAtLine')) {
+        await vscode.commands.executeCommand('vaultTool.openNoteAtLine', uri, message.line);
+        return;
+      }
+
       const doc = await vscode.workspace.openTextDocument(uri);
       const editor = await vscode.window.showTextDocument(doc, { preview: false });
 
@@ -171,6 +210,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     <select id="sortSelect">
       <option value="name">Ordenar por nombre</option>
       <option value="relevance">Ordenar por relevancia</option>
+      <option value="date">Ordenar por fecha de modificación</option>
     </select>
   </div>
 

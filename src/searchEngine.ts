@@ -17,12 +17,14 @@ export interface FileResult {
   titleAfter: string;
   matches: SearchMatch[];
   score: number;
+  mtime: number; // ms since epoch, from FileInput.mtime
 }
 
 export interface FileInput {
   uri: string;
   relativePath: string;
   text: string;
+  mtime: number; // ms since epoch (last modified)
 }
 
 export interface ParsedQuery {
@@ -325,6 +327,7 @@ export function search(
       titleAfter,
       matches,
       score,
+      mtime: file.mtime,
     });
   }
 

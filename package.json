@@ -48,9 +48,10 @@
           "description": "Patrón glob de archivos que se incluyen en la búsqueda."
         },
         "obsidianlikeSearch.exclude": {
-          "type": "string",
-          "default": "**/{node_modules,.git,.obsidian}/**",
-          "description": "Patrón glob de archivos/carpetas excluidos de la búsqueda."
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["**/node_modules/**", "**/.git/**", "**/.obsidian/**"],
+          "description": "Lista de patrones glob de archivos y carpetas excluidos de la búsqueda (ej: \"**/Plantillas/**\", \"**/*.excalidraw.md\")."
         }
       }
     }

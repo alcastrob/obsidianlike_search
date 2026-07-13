@@ -20,16 +20,18 @@ Mientras el cuadro de búsqueda está vacío se muestran siempre el resumen de s
 | `section:(encabezado)` | Restringe la búsqueda a líneas bajo un encabezado que contenga ese texto. |
 | `[propiedad]` / `[propiedad:valor]` | Filtra por una propiedad del frontmatter YAML. |
 
-Todos los términos y filtros se combinan con lógica AND. Los resultados se agrupan por archivo, con fragmentos de contexto resaltados que se pueden expandir/colapsar y abrir directamente en el editor.
+Todos los términos y filtros se combinan con lógica AND. Los resultados se agrupan por archivo, con fragmentos de contexto resaltados que se pueden expandir/colapsar. Las notas cuyo **nombre de archivo** coincide con la búsqueda aparecen siempre primero, antes que las que solo coinciden en el contenido, sea cual sea el orden elegido.
 
-Botones de la barra de búsqueda: `Aa` alterna sensibilidad a mayúsculas/minúsculas, `✕` limpia la búsqueda, `⚙` muestra/oculta el resumen de sintaxis mientras hay una búsqueda en curso (en reposo se muestra siempre). Los resultados se pueden ordenar por nombre o por relevancia.
+Al hacer clic en un resultado, si tienes instalada la extensión **Obsidian-like** (`../obsidianlike`), el archivo se abre con su editor personalizado (el mismo render "WYSIWYG" que usa esa extensión) en lugar del editor de texto plano de VS Code. Si no está instalada, se abre con el editor de texto normal, seleccionando el fragmento exacto.
+
+Botones de la barra de búsqueda: `Aa` alterna sensibilidad a mayúsculas/minúsculas, `✕` limpia la búsqueda, `⚙` muestra/oculta el resumen de sintaxis mientras hay una búsqueda en curso (en reposo se muestra siempre). Los resultados se pueden ordenar por nombre, por relevancia o por fecha de modificación del archivo (más recientes primero); en los tres modos, las coincidencias de nombre de archivo siguen yendo primero.
 
 ## Configuración
 
 | Ajuste | Por defecto | Descripción |
 |---|---|---|
 | `obsidianlikeSearch.include` | `**/*.md` | Patrón glob de archivos incluidos en la búsqueda. |
-| `obsidianlikeSearch.exclude` | `**/{node_modules,.git,.obsidian}/**` | Patrón glob de archivos/carpetas excluidos. |
+| `obsidianlikeSearch.exclude` | `["**/node_modules/**", "**/.git/**", "**/.obsidian/**"]` | Lista de patrones glob de archivos y carpetas excluidos de la búsqueda (cada entrada puede apuntar a un archivo o a una carpeta, ej. `"**/Plantillas/**"`). |
 
 ## Desarrollo
 
