@@ -55,6 +55,16 @@ Luego recarga la ventana de VS Code (Ctrl+Shift+P → "Developer: Reload Window"
 
 Este proyecto también forma parte de `..\obsidianlike\make.bat`, que empaqueta y reinstala las cinco extensiones de la suite y relanza VS Code sobre la bóveda real.
 
+## Seguridad y privacidad
+
+Auditado (2026-07-14) en busca de llamadas de red salientes, telemetría o recolección de diagnósticos: **no hay ninguna**. La extensión funciona 100% offline.
+
+- Sin `dependencies` en `package.json` (vacío); las `devDependencies` (`esbuild`, `typescript`, `@vscode/vsce`, `@types/*`) son solo herramientas de build y no se incluyen en el `.vsix` (ver `.vscodeignore`).
+- El código fuente (`src/*.ts`) no usa `fetch`, `http`/`https`, `XMLHttpRequest`, `WebSocket` ni `child_process`; los únicos `import` son `vscode` y el módulo built-in `path`.
+- El webview (`media/main.js`) solo se comunica con el extension host a través de la API sandboxed `acquireVsCodeApi()` (`postMessage`/`getState`/`setState`), y su CSP (`default-src 'none'`, sin `connect-src`) bloquearía cualquier `fetch`/XHR aunque existiera.
+- Sin referencias a SDKs de telemetría o analítica (Application Insights, Sentry, PostHog, Google Analytics, etc.) ni a `vscode.env.*`/`openExternal`.
+- La única integración entre procesos es local: el comando `vaultTool.openNoteAtLine` de la extensión hermana `obsidianlike` (mismo perfil de VS Code), vía `vscode.commands.executeCommand` — no sale del editor.
+
 ## Estado / pendientes
 
 - Sin tests automatizados todavía (`src/searchEngine.ts` no depende de `vscode`, por lo que es fácil de testear de forma aislada en el futuro).
