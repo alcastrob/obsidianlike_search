@@ -276,12 +276,35 @@ export function search(
     if (highlightTerms.length > 0) {
       lines.forEach((line, idx) => {
         if (!lineAllowed(idx)) return;
+
+        const ranges: { start: number; end: number }[] = [];
         for (const term of highlightTerms) {
           for (const start of indexOfAll(line, term, caseSensitive)) {
-            const end = start + term.length;
-            const ctx = buildContext(line, start, end);
-            matches.push({ line: idx, startCol: start, endCol: end, ...ctx });
+            ranges.push({ start, end: start + term.length });
           }
+        }
+        if (ranges.length === 0) return;
+
+        ranges.sort((a, b) => a.start - b.start || a.end - b.end);
+
+        // Merge ranges that overlap or touch (with only whitespace between them):
+        // a multi-word query like "Jose Servet" tokenizes into two free terms that
+        // each match separately, but when they occur next to each other in the text
+        // that's one phrase occurrence, not two overlapping snippet cards for the
+        // same spot.
+        const merged: { start: number; end: number }[] = [];
+        for (const r of ranges) {
+          const last = merged[merged.length - 1];
+          if (last && (r.start <= last.end || !line.slice(last.end, r.start).trim())) {
+            last.end = Math.max(last.end, r.end);
+          } else {
+            merged.push({ ...r });
+          }
+        }
+
+        for (const r of merged) {
+          const ctx = buildContext(line, r.start, r.end);
+          matches.push({ line: idx, startCol: r.start, endCol: r.end, ...ctx });
         }
       });
     }
