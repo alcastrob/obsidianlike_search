@@ -22,6 +22,8 @@ Mientras el cuadro de búsqueda está vacío se muestran siempre el resumen de s
 
 Todos los términos y filtros se combinan con lógica AND. Los resultados se agrupan por archivo, con fragmentos de contexto resaltados que se pueden expandir/colapsar. Las notas cuyo **nombre de archivo** coincide con la búsqueda aparecen siempre primero, antes que las que solo coinciden en el contenido, sea cual sea el orden elegido.
 
+Si buscas varias palabras (p. ej. `Jose Servet`) y aparecen juntas en el texto, se muestran como **una sola** coincidencia con todo el fragmento resaltado, en vez de una tarjeta separada por cada palabra.
+
 Al hacer clic en un resultado, si tienes instalada la extensión **Obsidian-like** (`../obsidianlike`), el archivo se abre con su editor personalizado (el mismo render "WYSIWYG" que usa esa extensión) en lugar del editor de texto plano de VS Code. Si no está instalada, se abre con el editor de texto normal, seleccionando el fragmento exacto.
 
 Botones de la barra de búsqueda: `Aa` alterna sensibilidad a mayúsculas/minúsculas, `✕` limpia la búsqueda, `⚙` muestra/oculta el resumen de sintaxis mientras hay una búsqueda en curso (en reposo se muestra siempre). Los resultados se pueden ordenar por nombre, por relevancia o por fecha de modificación del archivo (más recientes primero); en los tres modos, las coincidencias de nombre de archivo siguen yendo primero.
