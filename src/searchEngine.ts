@@ -16,6 +16,7 @@ export interface FileResult {
   titleMatchText: string;
   titleAfter: string;
   matches: SearchMatch[];
+  exactPhraseMatch: boolean;
   score: number;
   mtime: number; // ms since epoch, from FileInput.mtime
 }
@@ -267,20 +268,28 @@ export function search(
     }
 
     const matches: SearchMatch[] = [];
+    const normalizeTerm = (t: string) => (caseSensitive ? t : t.toLowerCase());
+    const distinctFreeTerms = new Set(parsed.freeTerms.map(normalizeTerm));
     const highlightTerms = [
-      ...parsed.freeTerms,
-      ...parsed.tagFilters.map((t) => '#' + t),
-      ...parsed.lineGroups.flat(),
+      ...parsed.freeTerms.map((term) => ({ term, isFree: true })),
+      ...parsed.tagFilters.map((t) => ({ term: '#' + t, isFree: false })),
+      ...parsed.lineGroups.flat().map((term) => ({ term, isFree: false })),
     ];
+
+    // A multi-term free-text query (e.g. "token oscuro") should rank files where the
+    // terms appear together as a phrase above files where they only matched separately.
+    // exactPhraseMatch tracks whether some merged match group (see below) covers every
+    // distinct free term at once. With 0-1 free terms there's nothing to distinguish.
+    let exactPhraseMatch = distinctFreeTerms.size <= 1;
 
     if (highlightTerms.length > 0) {
       lines.forEach((line, idx) => {
         if (!lineAllowed(idx)) return;
 
-        const ranges: { start: number; end: number }[] = [];
-        for (const term of highlightTerms) {
+        const ranges: { start: number; end: number; term: string; isFree: boolean }[] = [];
+        for (const { term, isFree } of highlightTerms) {
           for (const start of indexOfAll(line, term, caseSensitive)) {
-            ranges.push({ start, end: start + term.length });
+            ranges.push({ start, end: start + term.length, term, isFree });
           }
         }
         if (ranges.length === 0) return;
@@ -292,17 +301,23 @@ export function search(
         // each match separately, but when they occur next to each other in the text
         // that's one phrase occurrence, not two overlapping snippet cards for the
         // same spot.
-        const merged: { start: number; end: number }[] = [];
+        const merged: { start: number; end: number; freeTermsSeen: Set<string> }[] = [];
         for (const r of ranges) {
           const last = merged[merged.length - 1];
           if (last && (r.start <= last.end || !line.slice(last.end, r.start).trim())) {
             last.end = Math.max(last.end, r.end);
+            if (r.isFree) last.freeTermsSeen.add(normalizeTerm(r.term));
           } else {
-            merged.push({ ...r });
+            merged.push({
+              start: r.start,
+              end: r.end,
+              freeTermsSeen: new Set(r.isFree ? [normalizeTerm(r.term)] : []),
+            });
           }
         }
 
         for (const r of merged) {
+          if (r.freeTermsSeen.size === distinctFreeTerms.size) exactPhraseMatch = true;
           const ctx = buildContext(line, r.start, r.end);
           matches.push({ line: idx, startCol: r.start, endCol: r.end, ...ctx });
         }
@@ -349,6 +364,7 @@ export function search(
       titleMatchText,
       titleAfter,
       matches,
+      exactPhraseMatch,
       score,
       mtime: file.mtime,
     });

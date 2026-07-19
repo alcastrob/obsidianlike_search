@@ -96,19 +96,31 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     let results = search(parsed, files, message.caseSensitive);
 
     // Filename matches always lead, regardless of the chosen sort mode — that's the
-    // result the user is almost always looking for when they typed the query.
+    // result the user is almost always looking for when they typed the query. Next,
+    // for multi-word free-text queries, files where all terms occur together as a
+    // phrase (exactPhraseMatch) lead over files that only matched the terms separately
+    // — the chosen sort mode is the tiebreaker within each of those two groups.
     if (message.sort === 'relevance') {
       results.sort(
-        (a, b) => Number(b.titleMatch) - Number(a.titleMatch) || b.score - a.score || a.fileName.localeCompare(b.fileName)
+        (a, b) =>
+          Number(b.titleMatch) - Number(a.titleMatch) ||
+          Number(b.exactPhraseMatch) - Number(a.exactPhraseMatch) ||
+          b.score - a.score ||
+          a.fileName.localeCompare(b.fileName)
       );
     } else if (message.sort === 'date') {
       results.sort(
-        (a, b) => Number(b.titleMatch) - Number(a.titleMatch) || b.mtime - a.mtime || a.fileName.localeCompare(b.fileName)
+        (a, b) =>
+          Number(b.titleMatch) - Number(a.titleMatch) ||
+          Number(b.exactPhraseMatch) - Number(a.exactPhraseMatch) ||
+          b.mtime - a.mtime ||
+          a.fileName.localeCompare(b.fileName)
       );
     } else {
       results.sort(
         (a, b) =>
           Number(b.titleMatch) - Number(a.titleMatch) ||
+          Number(b.exactPhraseMatch) - Number(a.exactPhraseMatch) ||
           a.fileName.localeCompare(b.fileName) ||
           a.relativePath.localeCompare(b.relativePath)
       );
