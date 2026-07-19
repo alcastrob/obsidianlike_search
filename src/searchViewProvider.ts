@@ -188,6 +188,11 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     <button id="optionsToggle" class="icon-btn" title="Opciones de búsqueda">⚙</button>
   </div>
 
+  <div id="loadingIndicator" class="loading-indicator hidden">
+    <span class="spinner" aria-hidden="true"></span>
+    <span>Buscando…</span>
+  </div>
+
   <div id="idlePanel">
     <div id="historyPanel" class="history-panel">
       <div class="options-title">Búsquedas recientes</div>

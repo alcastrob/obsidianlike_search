@@ -162,6 +162,32 @@ body {
   opacity: 0.8;
 }
 
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 2px solid var(--vscode-foreground);
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .results-header {
   display: flex;
   justify-content: space-between;

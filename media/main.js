@@ -12,8 +12,10 @@
   const resultsCount = document.getElementById('resultsCount');
   const sortSelect = document.getElementById('sortSelect');
   const resultsContainer = document.getElementById('resultsContainer');
+  const loadingIndicator = document.getElementById('loadingIndicator');
 
   const DEBOUNCE_MS = 200;
+  const LOADING_DELAY_MS = 150;
   const MAX_HISTORY = 15;
 
   const savedState = vscode.getState() || {};
@@ -26,6 +28,22 @@
   };
 
   let debounceTimer = null;
+  let loadingTimer = null;
+
+  function showLoadingSoon() {
+    if (loadingTimer) clearTimeout(loadingTimer);
+    loadingTimer = setTimeout(() => {
+      loadingIndicator.classList.remove('hidden');
+    }, LOADING_DELAY_MS);
+  }
+
+  function hideLoading() {
+    if (loadingTimer) {
+      clearTimeout(loadingTimer);
+      loadingTimer = null;
+    }
+    loadingIndicator.classList.add('hidden');
+  }
 
   function escapeHtml(str) {
     return str
@@ -115,6 +133,7 @@
       resultsHeader.classList.add('hidden');
       return;
     }
+    showLoadingSoon();
     vscode.postMessage({
       command: 'search',
       query,
@@ -135,6 +154,7 @@
         clearTimeout(debounceTimer);
         debounceTimer = null;
       }
+      hideLoading();
       resultsContainer.innerHTML = '';
       resultsHeader.classList.add('hidden');
       return;
@@ -160,6 +180,7 @@
       clearTimeout(debounceTimer);
       debounceTimer = null;
     }
+    hideLoading();
     searchInput.value = '';
     resultsContainer.innerHTML = '';
     resultsHeader.classList.add('hidden');
@@ -277,8 +298,10 @@
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.command === 'results') {
+      hideLoading();
       renderResults(message);
     } else if (message.command === 'error') {
+      hideLoading();
       resultsContainer.innerHTML = '';
       resultsHeader.classList.add('hidden');
       const err = document.createElement('div');
