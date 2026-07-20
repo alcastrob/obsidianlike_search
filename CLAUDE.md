@@ -44,6 +44,7 @@ This project is also wired into `..\obsidianlike\make.bat`, which packages/reins
 ### Query syntax (`searchEngine.parseQuery`)
 
 - Free terms: plain words/`"quoted phrases"`, all must appear somewhere in the file (filename or body) — AND semantics.
+- `-term` / `-"quoted phrase"` — NOT: excludes any file where the term appears (filename or body). Tokenized via the same `-?"[^"]*"|\S+` regex before the other prefix checks, so it also strips a leading `-` off a quoted phrase.
 - `path:<text>` — substring match against the file's relative path.
 - `file:<text>` — substring match against the filename (without extension).
 - `tag:<name>` — matches `#name` in the body or `tags:` in YAML frontmatter.

@@ -30,6 +30,7 @@ export interface FileInput {
 
 export interface ParsedQuery {
   freeTerms: string[];
+  excludedTerms: string[];
   pathFilters: string[];
   fileFilters: string[];
   tagFilters: string[];
@@ -74,6 +75,7 @@ function extractParenGroups(raw: string, prefix: string): { groups: string[]; re
 export function parseQuery(raw: string): ParsedQuery {
   const parsed: ParsedQuery = {
     freeTerms: [],
+    excludedTerms: [],
     pathFilters: [],
     fileFilters: [],
     tagFilters: [],
@@ -96,9 +98,15 @@ export function parseQuery(raw: string): ParsedQuery {
   }
   remaining = sectionExtract.rest;
 
-  const tokens = remaining.match(/"[^"]*"|\[[^\]]*\]|\S+/g) || [];
+  const tokens = remaining.match(/-?"[^"]*"|\[[^\]]*\]|\S+/g) || [];
 
   for (const rawToken of tokens) {
+    if (rawToken.startsWith('-') && rawToken.length > 1) {
+      const excluded = stripQuotes(rawToken.slice(1));
+      if (excluded) parsed.excludedTerms.push(excluded);
+      continue;
+    }
+
     if (rawToken.startsWith('[') && rawToken.endsWith(']')) {
       const inner = rawToken.slice(1, -1);
       const colonIdx = inner.indexOf(':');
@@ -217,6 +225,7 @@ export function search(
 
     if (parsed.pathFilters.some((f) => !contains(file.relativePath, f, caseSensitive))) continue;
     if (parsed.fileFilters.some((f) => !contains(fileName, f, caseSensitive))) continue;
+    if (parsed.excludedTerms.some((t) => contains(fileName, t, caseSensitive) || contains(file.text, t, caseSensitive))) continue;
 
     const frontmatter = parseFrontmatter(file.text);
 
@@ -332,9 +341,12 @@ export function search(
       parsed.tagFilters.length === 0 &&
       matches.length === 0 &&
       !titleMatch &&
-      (parsed.pathFilters.length > 0 || parsed.fileFilters.length > 0 || parsed.propertyFilters.length > 0)
+      (parsed.pathFilters.length > 0 ||
+        parsed.fileFilters.length > 0 ||
+        parsed.propertyFilters.length > 0 ||
+        parsed.excludedTerms.length > 0)
     ) {
-      // Pure filter query (path:/file:/[property]) with no free terms: include file as a bare match.
+      // Pure filter query (path:/file:/[property]/-term) with no free terms: include file as a bare match.
     } else if (!titleMatch && matches.length === 0) {
       continue;
     }

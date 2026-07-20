@@ -213,6 +213,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 
     <div id="optionsPanel" class="options-panel">
       <div class="options-title">Opciones de búsqueda</div>
+      <div class="option-row"><code>-término</code><span>excluir resultados que lo contengan</span></div>
       <div class="option-row"><code>path:</code><span>coincidir la ruta del archivo</span></div>
       <div class="option-row"><code>file:</code><span>coincidir el nombre de archivo</span></div>
       <div class="option-row"><code>tag:</code><span>buscar por etiquetas</span></div>

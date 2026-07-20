@@ -13,6 +13,7 @@ Mientras el cuadro de búsqueda está vacío se muestran siempre el resumen de s
 | Operador | Efecto |
 |---|---|
 | `palabra` / `"frase exacta"` | Término libre: debe aparecer en el nombre de archivo o en el contenido. |
+| `-palabra` / `-"frase exacta"` | Excluye archivos donde aparezca ese término (nombre de archivo o contenido). |
 | `path:carpeta` | Filtra por ruta relativa del archivo. |
 | `file:nombre` | Filtra por nombre de archivo (sin extensión). |
 | `tag:nombre` | Filtra por etiqueta `#nombre` en el cuerpo o `tags:` en el frontmatter. |
@@ -70,5 +71,5 @@ Auditado (2026-07-14) en busca de llamadas de red salientes, telemetría o recol
 ## Estado / pendientes
 
 - Sin tests automatizados todavía (`src/searchEngine.ts` no depende de `vscode`, por lo que es fácil de testear de forma aislada en el futuro).
-- Sin operadores OR/NOT ni búsqueda por regex; solo AND de subcadenas, como la búsqueda básica de Obsidian.
+- Sin operador OR ni búsqueda por regex; solo AND de subcadenas (más NOT vía `-término`), como la búsqueda básica de Obsidian.
 - Cada búsqueda relee y reescanea todos los archivos que coinciden con el patrón `include` (sin índice ni caché); adecuado para bóvedas de tamaño normal.
