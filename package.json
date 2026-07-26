@@ -18,6 +18,10 @@
         "command": "obsidianlikeSearch.open",
         "title": "Obsidian-like Search: Abrir búsqueda",
         "icon": "$(search)"
+      },
+      {
+        "command": "obsidianlikeSearch.searchFor",
+        "title": "Obsidian-like Search: Buscar"
       }
     ],
     "viewsContainers": {

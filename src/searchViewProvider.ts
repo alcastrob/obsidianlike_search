@@ -23,11 +23,14 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'obsidianlikeSearch.searchView';
 
   private view?: vscode.WebviewView;
+  private webviewReady = false;
+  private pendingQuery: string | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
+    this.webviewReady = false;
 
     webviewView.webview.options = {
       enableScripts: true,
@@ -41,6 +44,9 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         await this.handleSearch(message);
       } else if (message.command === 'openMatch') {
         await this.handleOpenMatch(message);
+      } else if (message.command === 'ready') {
+        this.webviewReady = true;
+        this.flushPendingQuery();
       }
     });
   }
@@ -48,6 +54,28 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
   public focusInput(): void {
     this.view?.show(true);
     this.view?.webview.postMessage({ command: 'focus' });
+  }
+
+  /**
+   * Carga `query` en el cuadro de búsqueda y ejecuta la búsqueda, revelando el
+   * panel si hace falta. Usado por otras extensiones "Obsidian like" (p.ej.
+   * obsidianlike-links) a través del comando `obsidianlikeSearch.searchFor`.
+   * Si el webview aún no ha terminado de cargar (primera vez que se revela),
+   * la query se guarda y se envía en cuanto llega su mensaje "ready" — un
+   * `postMessage` antes de eso se perdería porque el script todavía no está
+   * escuchando.
+   */
+  public runQuery(query: string): void {
+    this.pendingQuery = query;
+    this.view?.show(true);
+    this.flushPendingQuery();
+  }
+
+  private flushPendingQuery(): void {
+    if (this.webviewReady && this.view && this.pendingQuery !== undefined) {
+      this.view.webview.postMessage({ command: 'setQuery', query: this.pendingQuery });
+      this.pendingQuery = undefined;
+    }
   }
 
   private async handleSearch(message: SearchRequestMessage): Promise<void> {

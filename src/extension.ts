@@ -14,6 +14,13 @@ export function activate(context: vscode.ExtensionContext): void {
       provider.focusInput();
     })
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('obsidianlikeSearch.searchFor', async (query: string) => {
+      await vscode.commands.executeCommand('workbench.view.extension.obsidianlikeSearch');
+      provider.runQuery(query);
+    })
+  );
 }
 
 export function deactivate(): void {}

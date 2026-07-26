@@ -311,6 +311,12 @@
     } else if (message.command === 'focus') {
       searchInput.focus();
       searchInput.select();
+    } else if (message.command === 'setQuery') {
+      searchInput.value = message.query;
+      updateIdleVisibility();
+      runSearch();
+      addToHistory(message.query);
+      searchInput.focus();
     }
   });
 
