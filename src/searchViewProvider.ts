@@ -25,6 +25,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private webviewReady = false;
   private pendingQuery: string | undefined;
+  private pendingFocus = false;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -47,13 +48,39 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
       } else if (message.command === 'ready') {
         this.webviewReady = true;
         this.flushPendingQuery();
+        if (this.pendingFocus) {
+          this.pendingFocus = false;
+          this.view?.webview.postMessage({ command: 'focus' });
+        }
+      }
+    });
+
+    // El panel arranca visible en cuanto se resuelve (el usuario acaba de
+    // seleccionarlo en la activity bar), así que pedimos el foco ya mismo.
+    // sendFocus() lo encola si el script del webview aún no ha mandado
+    // 'ready' (misma carrera que pendingQuery evita para runQuery).
+    this.sendFocus();
+
+    // Selecciones posteriores del icono (con el panel ya cargado, sin pasar
+    // por 'ready' de nuevo) llegan aquí como cambios de visibilidad.
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) {
+        this.sendFocus();
       }
     });
   }
 
   public focusInput(): void {
     this.view?.show(true);
-    this.view?.webview.postMessage({ command: 'focus' });
+    this.sendFocus();
+  }
+
+  private sendFocus(): void {
+    if (this.webviewReady && this.view) {
+      this.view.webview.postMessage({ command: 'focus' });
+    } else {
+      this.pendingFocus = true;
+    }
   }
 
   /**

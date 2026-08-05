@@ -4,7 +4,7 @@ Extensión local de VS Code que añade un panel de búsqueda de texto completo e
 
 ## Uso
 
-Abre el panel desde el icono de búsqueda en la barra de actividad, o con el comando **"Obsidian-like Search: Abrir búsqueda"** (`obsidianlikeSearch.open`). Los resultados se actualizan en vivo según se escribe, sin necesidad de pulsar Enter (Enter fuerza la búsqueda al instante y la guarda en el historial).
+Abre el panel desde el icono de búsqueda en la barra de actividad, o con el comando **"Obsidian-like Search: Abrir búsqueda"** (`obsidianlikeSearch.open`). Al seleccionar el panel (por el icono o por el comando) el foco se sitúa automáticamente en el cuadro de búsqueda, listo para escribir. Los resultados se actualizan en vivo según se escribe, sin necesidad de pulsar Enter (Enter fuerza la búsqueda al instante y la guarda en el historial).
 
 Mientras el cuadro de búsqueda está vacío se muestran siempre el resumen de sintaxis y el historial de búsquedas recientes; en cuanto se escribe algo, ambos se ocultan y aparecen los resultados. Cada entrada del historial (hasta 15, sin duplicados) se puede volver a ejecutar con un clic o eliminar con su botón `✕`.
 
