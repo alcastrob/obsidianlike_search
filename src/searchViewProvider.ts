@@ -6,7 +6,7 @@ interface SearchRequestMessage {
   command: 'search';
   query: string;
   caseSensitive: boolean;
-  sort: 'name' | 'relevance' | 'date';
+  sort: 'name' | 'relevance' | 'date-asc' | 'date-desc';
 }
 
 interface OpenMatchMessage {
@@ -163,12 +163,20 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
           b.score - a.score ||
           a.fileName.localeCompare(b.fileName)
       );
-    } else if (message.sort === 'date') {
+    } else if (message.sort === 'date-desc') {
       results.sort(
         (a, b) =>
           Number(b.titleMatch) - Number(a.titleMatch) ||
           Number(b.exactPhraseMatch) - Number(a.exactPhraseMatch) ||
           b.mtime - a.mtime ||
+          a.fileName.localeCompare(b.fileName)
+      );
+    } else if (message.sort === 'date-asc') {
+      results.sort(
+        (a, b) =>
+          Number(b.titleMatch) - Number(a.titleMatch) ||
+          Number(b.exactPhraseMatch) - Number(a.exactPhraseMatch) ||
+          a.mtime - b.mtime ||
           a.fileName.localeCompare(b.fileName)
       );
     } else {
@@ -283,7 +291,8 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     <select id="sortSelect">
       <option value="name">Ordenar por nombre</option>
       <option value="relevance">Ordenar por relevancia</option>
-      <option value="date">Ordenar por fecha de modificación</option>
+      <option value="date-desc">Ordenar por fecha de modificación (más reciente primero)</option>
+      <option value="date-asc">Ordenar por fecha de modificación (más antigua primero)</option>
     </select>
   </div>
 
