@@ -29,6 +29,8 @@ Al hacer clic en un resultado, si tienes instalada la extensión **Obsidian-like
 
 Botones de la barra de búsqueda: `Aa` alterna sensibilidad a mayúsculas/minúsculas, `✕` limpia la búsqueda, `⚙` muestra/oculta el resumen de sintaxis mientras hay una búsqueda en curso (en reposo se muestra siempre). Los resultados se pueden ordenar por nombre, por relevancia o por fecha de modificación del archivo (más recientes primero); en los tres modos, las coincidencias de nombre de archivo siguen yendo primero.
 
+Si una búsqueda demasiado genérica (p. ej. una sola letra, o una bóveda muy grande) tarda en devolver resultados, aparece un botón **Cancelar** junto al indicador "Buscando…" que interrumpe la búsqueda en curso al instante.
+
 ## Configuración
 
 | Ajuste | Por defecto | Descripción |
@@ -72,4 +74,4 @@ Auditado (2026-07-14) en busca de llamadas de red salientes, telemetría o recol
 
 - Sin tests automatizados todavía (`src/searchEngine.ts` no depende de `vscode`, por lo que es fácil de testear de forma aislada en el futuro).
 - Sin operador OR ni búsqueda por regex; solo AND de subcadenas (más NOT vía `-término`), como la búsqueda básica de Obsidian.
-- Cada búsqueda relee y reescanea todos los archivos que coinciden con el patrón `include` (sin índice ni caché); adecuado para bóvedas de tamaño normal.
+- Cada búsqueda relee y reescanea todos los archivos que coinciden con el patrón `include` (sin índice ni caché); adecuado para bóvedas de tamaño normal. Una búsqueda demasiado genérica sobre una bóveda grande se puede cancelar con el botón "Cancelar" en vez de esperar a que termine sola.

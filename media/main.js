@@ -13,6 +13,7 @@
   const sortSelect = document.getElementById('sortSelect');
   const resultsContainer = document.getElementById('resultsContainer');
   const loadingIndicator = document.getElementById('loadingIndicator');
+  const cancelSearchBtn = document.getElementById('cancelSearchBtn');
 
   const DEBOUNCE_MS = 200;
   const LOADING_DELAY_MS = 150;
@@ -29,6 +30,12 @@
 
   let debounceTimer = null;
   let loadingTimer = null;
+  // Se pone a true cuando se pulsa "Cancelar" mientras una búsqueda está en
+  // curso, para descartar un 'results'/'error' tardío que llegue del host
+  // justo después (la cancelación viaja por el mismo canal de mensajes en
+  // sentido contrario, así que no hay garantía de que llegue antes). Se
+  // resetea al arrancar la siguiente búsqueda real.
+  let searchCancelled = false;
 
   function showLoadingSoon() {
     if (loadingTimer) clearTimeout(loadingTimer);
@@ -133,6 +140,7 @@
       resultsHeader.classList.add('hidden');
       return;
     }
+    searchCancelled = false;
     showLoadingSoon();
     vscode.postMessage({
       command: 'search',
@@ -140,6 +148,18 @@
       caseSensitive: state.caseSensitive,
       sort: sortSelect.value,
     });
+  }
+
+  function cancelSearch() {
+    searchCancelled = true;
+    hideLoading();
+    vscode.postMessage({ command: 'cancelSearch' });
+    resultsContainer.innerHTML = '';
+    resultsHeader.classList.add('hidden');
+    const cancelledState = document.createElement('div');
+    cancelledState.className = 'empty-state';
+    cancelledState.textContent = 'Búsqueda cancelada.';
+    resultsContainer.appendChild(cancelledState);
   }
 
   function scheduleSearch() {
@@ -196,6 +216,8 @@
   sortSelect.addEventListener('change', () => {
     if (searchInput.value.trim()) runSearch();
   });
+
+  cancelSearchBtn.addEventListener('click', cancelSearch);
 
   function renderTitle(file) {
     if (!file.titleMatch) return escapeHtml(file.fileName);
@@ -298,9 +320,11 @@
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.command === 'results') {
+      if (searchCancelled) return; // resultado tardío de una búsqueda ya cancelada
       hideLoading();
       renderResults(message);
     } else if (message.command === 'error') {
+      if (searchCancelled) return;
       hideLoading();
       resultsContainer.innerHTML = '';
       resultsHeader.classList.add('hidden');

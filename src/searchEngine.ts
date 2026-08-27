@@ -41,6 +41,25 @@ export interface ParsedQuery {
 
 const CONTEXT_RADIUS = 60;
 
+// Con una query muy genérica (p.ej. una sola letra) sobre una bóveda grande,
+// el bucle de `search()` puede tardar varios segundos en JS síncrono normal,
+// congelando el extension host mientras corre. Cada YIELD_EVERY_FILES
+// archivos cedemos el control al event loop y comprobamos `signal.aborted`,
+// para que un mensaje 'cancelSearch' llegado desde el webview (ver
+// SearchViewProvider.handleCancelSearch) pueda interrumpir la búsqueda.
+const YIELD_EVERY_FILES = 20;
+
+export class SearchCancelledError extends Error {
+  constructor() {
+    super('Search cancelled');
+    this.name = 'SearchCancelledError';
+  }
+}
+
+export interface SearchOptions {
+  signal?: AbortSignal;
+}
+
 function stripQuotes(token: string): string {
   if (token.length >= 2 && token.startsWith('"') && token.endsWith('"')) {
     return token.slice(1, -1);
@@ -213,14 +232,22 @@ function buildContext(lineText: string, start: number, end: number): { before: s
   return { before, matchText: lineText.slice(start, end), after };
 }
 
-export function search(
+export async function search(
   parsed: ParsedQuery,
   files: FileInput[],
-  caseSensitive: boolean
-): FileResult[] {
+  caseSensitive: boolean,
+  options: SearchOptions = {}
+): Promise<FileResult[]> {
+  const { signal } = options;
   const results: FileResult[] = [];
 
-  for (const file of files) {
+  for (let fileIdx = 0; fileIdx < files.length; fileIdx++) {
+    if (fileIdx % YIELD_EVERY_FILES === 0) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      if (signal?.aborted) throw new SearchCancelledError();
+    }
+
+    const file = files[fileIdx];
     const fileName = baseName(file.relativePath);
 
     if (parsed.pathFilters.some((f) => !contains(file.relativePath, f, caseSensitive))) continue;

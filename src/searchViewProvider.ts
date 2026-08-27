@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { FileInput, FileResult, parseQuery, search } from './searchEngine';
+import { FileInput, FileResult, SearchCancelledError, parseQuery, search } from './searchEngine';
 
 interface SearchRequestMessage {
   command: 'search';
@@ -17,7 +17,11 @@ interface OpenMatchMessage {
   endCol?: number;
 }
 
-type InboundMessage = SearchRequestMessage | OpenMatchMessage | { command: 'ready' };
+type InboundMessage =
+  | SearchRequestMessage
+  | OpenMatchMessage
+  | { command: 'ready' }
+  | { command: 'cancelSearch' };
 
 export class SearchViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'obsidianlikeSearch.searchView';
@@ -26,6 +30,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
   private webviewReady = false;
   private pendingQuery: string | undefined;
   private pendingFocus = false;
+  private currentSearch: AbortController | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -45,6 +50,8 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         await this.handleSearch(message);
       } else if (message.command === 'openMatch') {
         await this.handleOpenMatch(message);
+      } else if (message.command === 'cancelSearch') {
+        this.handleCancelSearch();
       } else if (message.command === 'ready') {
         this.webviewReady = true;
         this.flushPendingQuery();
@@ -105,8 +112,28 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  /**
+   * Aborta la búsqueda del botón "Cancelar" del webview (visible junto al
+   * spinner de #loadingIndicator mientras una búsqueda está en curso). El
+   * propio `search()` de searchEngine comprueba `signal.aborted` entre
+   * archivos y lanza SearchCancelledError, que handleSearch atrapa sin
+   * enviar 'results' — el webview ya se ha limpiado localmente al pulsar el
+   * botón (ver cancelSearchBtn en main.js), así que aquí no hace falta
+   * responder nada.
+   */
+  private handleCancelSearch(): void {
+    this.currentSearch?.abort();
+  }
+
   private async handleSearch(message: SearchRequestMessage): Promise<void> {
     if (!this.view) return;
+
+    // Una nueva búsqueda (nueva pulsación de tecla tras el debounce, cambio de
+    // orden/mayúsculas, o el botón "Cancelar") siempre invalida cualquier
+    // búsqueda anterior todavía en curso.
+    this.currentSearch?.abort();
+    const controller = new AbortController();
+    this.currentSearch = controller;
 
     const config = vscode.workspace.getConfiguration('obsidianlikeSearch');
     const include = config.get<string>('include', '**/*.md');
@@ -143,12 +170,22 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         })
       );
     } catch (err) {
+      if (controller.signal.aborted) return;
       this.view.webview.postMessage({ command: 'error', message: String(err) });
       return;
     }
+    if (controller.signal.aborted) return;
 
     const parsed = parseQuery(trimmed);
-    let results = search(parsed, files, message.caseSensitive);
+    let results: FileResult[];
+    try {
+      results = await search(parsed, files, message.caseSensitive, { signal: controller.signal });
+    } catch (err) {
+      if (err instanceof SearchCancelledError) return;
+      this.view.webview.postMessage({ command: 'error', message: String(err) });
+      return;
+    }
+    if (controller.signal.aborted) return;
 
     // Filename matches always lead, regardless of the chosen sort mode — that's the
     // result the user is almost always looking for when they typed the query. Next,
@@ -266,6 +303,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
   <div id="loadingIndicator" class="loading-indicator hidden">
     <span class="spinner" aria-hidden="true"></span>
     <span>Buscando…</span>
+    <button id="cancelSearchBtn" class="text-btn cancel-btn" title="Cancelar búsqueda">Cancelar</button>
   </div>
 
   <div id="idlePanel">
